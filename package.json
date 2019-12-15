@@ -20,6 +20,7 @@
     "lodash": "4.17.5",
     "opn": "5.3.0",
     "request": "2.85.0",
+    "ts-morph": "^6.0.2",
     "ts-simple-ast": "9.5.0",
     "typescript": "2.7.2",
     "yargs": "11.0.0"

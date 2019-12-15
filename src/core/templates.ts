@@ -21,20 +21,35 @@ export const mermaidTemplates = {
   plainClassOrInterface: (name: string) => `${name}`,
   colorClass: (name: string) => `class ${name}`,
   colorInterface: (name: string) => `class ${name}`,
+  getScope(info: PropertyDetails | MethodDetails) {
+    switch (info.scope) {
+      case "private":
+        return "-";
+      case "protected":
+        return "#";
+    }
+    return "+";
+  },
+  propertyTemplate: (property: PropertyDetails) => {
+    return `${mermaidTemplates.getScope(property)}${property.name}`;
+  },
+  methodTemplate: (method: MethodDetails) => {
+    return `${mermaidTemplates.getScope(method)}${method.name}()`;
+  },
   class: (name: string, props: PropertyDetails[], methods: MethodDetails[]) => {
-    const pTemplate = (property: PropertyDetails) => `${property.name}`;
-    const mTemplate = (method: MethodDetails) => `${method.name}()`;
     return (
       `${mermaidTemplates.colorClass(name)} {\n\t` +
-      `${props.map(pTemplate).join("\n\t")}\n\t${methods.map(mTemplate).join("\n\t")}\n}\n`
+      `${props.map(mermaidTemplates.propertyTemplate).join("\n\t")}\n\t${methods
+        .map(mermaidTemplates.methodTemplate)
+        .join("\n\t")}\n}\n`
     );
   },
   interface: (name: string, props: PropertyDetails[], methods: MethodDetails[]) => {
-    const pTemplate = (property: PropertyDetails) => `${property.name}`;
-    const mTemplate = (method: MethodDetails) => `${method.name}()`;
     return (
       `${mermaidTemplates.colorInterface(name)} {\n\t<<interface>>\n` +
-      `${props.map(pTemplate).join("\n")}\n\t${methods.map(mTemplate).join("\n")}\n}\n`
+      `${props.map(mermaidTemplates.propertyTemplate).join("\n")}\n\t${methods
+        .map(mermaidTemplates.methodTemplate)
+        .join("\n")}\n}\n`
     );
   },
   finalize: async (dsl: string, args: Arguments): Promise<void> => {

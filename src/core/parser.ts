@@ -1,19 +1,38 @@
-import Ast, * as SimpleAST from "ts-simple-ast";
-import * as ts from "typescript";
+import { ClassDeclaration, InterfaceDeclaration, Project, Symbol } from "ts-morph";
 import { HeritageClause, MethodDetails, PropertyDetails } from "./interfaces";
 
 export function getAst(tsConfigPath: string, sourceFilesPaths?: string[]) {
-  const ast = new Ast({
+  const project = new Project({
     tsConfigFilePath: tsConfigPath,
     addFilesFromTsConfig: !Array.isArray(sourceFilesPaths)
   });
   if (sourceFilesPaths) {
-    ast.addExistingSourceFiles(sourceFilesPaths);
+    project.addSourceFilesAtPaths(sourceFilesPaths);
   }
-  return ast;
+  return project;
 }
 
-export function parseClasses(classDeclaration: SimpleAST.ClassDeclaration) {
+function symbolTransform(sym: Symbol) {
+  let scope = "public";
+  if (sym.compilerSymbol.valueDeclaration.modifiers) {
+    sym.compilerSymbol.valueDeclaration.modifiers.forEach(s => {
+      switch (s.kind) {
+        case 116:
+          scope = "private";
+          break;
+        case 117:
+          scope = "protected";
+          break;
+      }
+    });
+  }
+  return {
+    name: sym.getName(),
+    scope
+  };
+}
+
+export function parseClasses(classDeclaration: ClassDeclaration) {
   const className = classDeclaration.getSymbol()!.getName();
   const propertyDeclarations = classDeclaration.getProperties();
   const methodDeclarations = classDeclaration.getMethods();
@@ -22,9 +41,7 @@ export function parseClasses(classDeclaration: SimpleAST.ClassDeclaration) {
     .map(property => {
       const sym = property.getSymbol();
       if (sym) {
-        return {
-          name: sym.getName()
-        };
+        return symbolTransform(sym);
       }
     })
     .filter(p => p !== undefined) as PropertyDetails[];
@@ -33,9 +50,7 @@ export function parseClasses(classDeclaration: SimpleAST.ClassDeclaration) {
     .map(method => {
       const sym = method.getSymbol();
       if (sym) {
-        return {
-          name: sym.getName()
-        };
+        return symbolTransform(sym);
       }
     })
     .filter(p => p !== undefined) as MethodDetails[];
@@ -43,7 +58,7 @@ export function parseClasses(classDeclaration: SimpleAST.ClassDeclaration) {
   return { className, properties, methods };
 }
 
-export function parseInterfaces(interfaceDeclaration: SimpleAST.InterfaceDeclaration) {
+export function parseInterfaces(interfaceDeclaration: InterfaceDeclaration) {
   const interfaceName = interfaceDeclaration.getSymbol()!.getName();
   const propertyDeclarations = interfaceDeclaration.getProperties();
   const methodDeclarations = interfaceDeclaration.getMethods();
@@ -52,9 +67,7 @@ export function parseInterfaces(interfaceDeclaration: SimpleAST.InterfaceDeclara
     .map(property => {
       const sym = property.getSymbol();
       if (sym) {
-        return {
-          name: sym.getName()
-        };
+        return symbolTransform(sym);
       }
     })
     .filter(p => p !== undefined) as PropertyDetails[];
@@ -63,9 +76,7 @@ export function parseInterfaces(interfaceDeclaration: SimpleAST.InterfaceDeclara
     .map(method => {
       const sym = method.getSymbol();
       if (sym) {
-        return {
-          name: sym.getName()
-        };
+        return symbolTransform(sym);
       }
     })
     .filter(p => p !== undefined) as MethodDetails[];
@@ -73,14 +84,14 @@ export function parseInterfaces(interfaceDeclaration: SimpleAST.InterfaceDeclara
   return { interfaceName, properties, methods };
 }
 
-export function parseHeritageClauses(classDeclaration: SimpleAST.ClassDeclaration) {
+export function parseHeritageClauses(classDeclaration: ClassDeclaration) {
   const className = classDeclaration.getSymbol()!.getName();
   const extended = classDeclaration.getExtends();
   const implemented = classDeclaration.getImplements();
   let heritageClauses: HeritageClause[] = [];
-
   if (extended) {
-    const identifier = extended.getChildrenOfKind(ts.SyntaxKind.Identifier)[0];
+    // 75 is the class identifier, was ts.SyntaxKind.Identifier (71)
+    const identifier = extended.getChildrenOfKind(75)[0];
     if (identifier) {
       const sym = identifier.getSymbol();
       if (sym) {
@@ -94,7 +105,8 @@ export function parseHeritageClauses(classDeclaration: SimpleAST.ClassDeclaratio
 
   if (implemented) {
     implemented.forEach(i => {
-      const identifier = i.getChildrenOfKind(ts.SyntaxKind.Identifier)[0];
+      // 75 is the class identifier, was ts.SyntaxKind.Identifier (71)
+      const identifier = i.getChildrenOfKind(75)[0];
       if (identifier) {
         const sym = identifier.getSymbol();
         if (sym) {
