@@ -75,7 +75,6 @@ export const yumlTemplates = {
   colorClass: (name: string) => `[${name}{bg:skyblue}]`,
   colorInterface: (name: string) => `[${name}{bg:palegreen}]`,
   class: (name: string, props: PropertyDetails[], methods: MethodDetails[]) => {
-    console.log(props);
     const pTemplate = (property: PropertyDetails) => `${property.name};`;
     const mTemplate = (method: MethodDetails) => `${method.name}();`;
     return (
